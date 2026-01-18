@@ -1,0 +1,111 @@
+# Path Glob, Mime Glob, Category Path, Folder Action, AI
+# Named capture groups from regexes become metadata fields (e.g. (?P<backup_year>\d{4}) -> metadata["backup_year"]).
+# Templates can use placeholders like {backup_year|UnknownYear} to reference those fields.
+# Example regex: ^.*/Backups/(?P<backup_job>[^/]+)$ with template segment {backup_job|UnknownJob}.
+#
+# DEFAULT BEHAVIOR: Folders are KEPT (preserved) unless explicitly marked for disaggregation.
+# Only top-level organizational folders (Downloads, category markers) should be disaggregated.
+# Most content folders maintain their structure by default.
+
+# Top-level organizational folders to disaggregate (source roots)
+# Use 'final' for source roots that should ALWAYS disaggregate (no AI override)
+^.*/Dropbox(/)?$,*,Unknown,disaggregate,final
+^.*/Downloads(/)?$,*,Unknown,disaggregate,final
+^.*/Desktop(/)?$,*,Unknown,disaggregate,final
+^.*/Temp(/)?$,*,Unknown,disaggregate,final
+^.*/Temporary(/)?$,*,Unknown,disaggregate,final
+^.*/Projects(/)?$,*,Software/Source_Code,disaggregate,ai
+^.*/Docs(/)?$,*,Documents,disaggregate,ai
+
+# System and metadata files - structural markers
+# These signal that the parent folder is a project/repo and should be kept together
+^.*\/\.git\/.*$,*,System,keep_parent,final
+^.*\/\.svn\/.*$,*,System,keep_parent,final
+^.*\/\.hg\/.*$,*,System,keep_parent,final
+^.*\/\.venv\/.*$,*,Software/Dependencies,keep_parent,final
+^.*\/node_modules\/.*$,*,Software/Dependencies,keep_parent,final
+
+# Project manifest files - structural markers for software projects
+^.*\/package\.json$,*,Software/Source_Code,keep_parent,final
+^.*\/package-lock\.json$,*,Software/Source_Code,keep_parent,final
+^.*\/requirements\.txt$,*,Software/Source_Code,keep_parent,final
+^.*\/setup\.py$,*,Software/Source_Code,keep_parent,final
+^.*\/pyproject\.toml$,*,Software/Source_Code,keep_parent,final
+^.*\/Cargo\.toml$,*,Software/Source_Code,keep_parent,final
+^.*\/go\.mod$,*,Software/Source_Code,keep_parent,final
+^.*\/pom\.xml$,*,Software/Source_Code,keep_parent,final
+^.*\/build\.gradle$,*,Software/Source_Code,keep_parent,final
+^.*\/Gemfile$,*,Software/Source_Code,keep_parent,final
+^.*\/composer\.json$,*,Software/Source_Code,keep_parent,final
+
+# These files just get kept with their folder (don't force parent to be kept)
+^.*\/__pycache__\/.*$,*,System,keep,final
+^.*\.pyc$,*,System,keep,final
+^thumbs\.db$,*,System,keep,final
+^\.ds_store$,*,System,keep,final
+
+# Project and software paths
+^.*\/site-packages\/.*$,*,Software/Dependencies,keep,final
+^.*\/vendor\/.*$,*,Software/Dependencies,disaggregate,ai
+^.*\/(build|dist)\/.*$,*,Software/Source_Code,keep,final
+^.*\/tests?\/.*$,*,Software/Source_Code,keep,final
+^.*/(README\.md|AGENTS\.md)$,*,Software/Source_Code,keep,final
+^.*\/(docs|documentation)\/.*$,*,Software/Source_Code,disaggregate,ai
+
+# Language-specific project files
+^.*\.ipynb$,*,Software/Source_Code,keep,final
+^.*\.py$,*,Software/Source_Code,keep,final
+^.*\.(js|jsx|ts|tsx)$,*,Software/Source_Code,keep,final
+^.*\.(java|class|jar)$,*,Software/Source_Code,keep,final
+^.*\.(c|cpp|cc|h|hpp)$,*,Software/Source_Code,keep,final
+^.*\.go$,*,Software/Source_Code,keep,final
+^.*\.rs$,*,Software/Source_Code,keep,final
+^.*\.(rb|php|swift|kt|kts|scala|sh|bash|zsh|fish|ps1|psm1|psd1|cmake|sql|r|lua|toml|yaml|yml|ini|cfg|gradle|make|m|mm|pl|pm|tcl|vb|asm|s|proto|dart)$,*,Software/Source_Code,keep,final
+^makefile$,*,Software/Source_Code,keep,final
+^cmakelists\.txt$,*,Software/Source_Code,keep,final
+# Logs and databases
+^.*\.(log|logs)$,text/plain,System,keep,final
+^.*\.(db|sqlite|sqlite3)$,application/x-sqlite3,System,keep,final
+^.*~$,*,System,keep,final
+
+# Archives and disk images
+# Match structured backup folders before generic archive files so we preserve per-job metadata.
+(?i)^.*\/Backups\/(?P<backup_job>[A-Za-z0-9\-_]+_(?P<backup_year>\d{4})(?P<backup_month>\d{2})\d{2}_(?P<backup_time>\d{6}))(\/.*)?$,*,Backups,keep,final
+(?i)^.*\/Backups\/(?P<year>(?i:January|February|March|April|May|June|July|August|September|October|November|December))\/[^/]+\.(jpg|jpeg|png|heic|bmp|gif)$,image/.+,Media/Photos,keep,final
+^.*\.(zip|rar|7z|tar|tgz|tar\.gz|bz2|xz)$,*,Backups,disaggregate,ai
+
+# Media categories
+"(?i)^.*?(s\d{1,2}e\d{1,2}|season).*\.(mp4|mkv|mov|avi|wmv|m4v)$",video/.+,Media/Videos/Shows,keep,final
+.*,(video/mp4|video/x-matroska|video/quicktime|video/x-msvideo),Media/Videos/Movies,keep,ai
+.*,(video/.*),Media/Videos/Clips,disaggregate,ai
+.*,audio/ac3,Media/Videos/Movies,disaggregate,ai
+.*,audio/.+,Media/Music,keep,ai
+.*,image/.+,Media/Photos,keep,ai
+# Documents
+(?i)^.*?(w2|w-2|1099|tax return|irs|form[ _-]?1040|k-1|w-9).*\.(pdf|txt|md|doc|docx|rtf|xls|xlsx|csv|ppt|pptx|odt)$,.*,Documents/Taxes,disaggregate,final
+(?i)^.*?(receipt|invoice|order|purchase|paid|payment|subtotal|total).*\.(pdf|txt|md|doc|docx|rtf|xls|xlsx|csv|ppt|pptx|odt)$,.*,Documents/Finance,disaggregate,ai
+(?i)^.*?(clinic|doctor|patient|medical|health|prescription|rx|lab).*\.(pdf|txt|md|doc|docx|rtf|xls|xlsx|csv|ppt|pptx|odt)$,.*,Documents/Health,disaggregate,ai
+(?i)^.*?(immigration|uscis|passport|visa|lease|deed|title|contract|court|dmv|registration|notary).*\.(pdf|txt|md|doc|docx|rtf|xls|xlsx|csv|ppt|pptx|odt)$,.*,Documents/Legal,disaggregate,ai
+
+# Category marker directories - disaggregate the category folder itself, not children
+^.*/Books(/)?$,*,Media/Books,disaggregate,ai
+^.*/Music(/)?$,*,Media/Music,disaggregate,ai
+^.*/Video(/)?$,*,Media/Videos,disaggregate,ai
+# Books/Music files - AI decides folder structure (disaggregate is the suggested default)
+^.*\.(epub|mobi|djvu|cbz|cbr|fb2)$,.*,Media/Books/Digital,disaggregate,ai
+(?i)^.*(paper|study|research).*(pdf)$,.*,Media/Books/Research,disaggregate,ai
+(?i)^.*(book|novel|ebook|chapter|volume).*(pdf)$,.*,Media/Books/Digital,disaggregate,ai
+^.*\.(pdf|txt|md|doc|docx|rtf|xls|xlsx|csv|ppt|pptx|odt)$,.*,Documents/Other,disaggregate,ai
+.*,text/.+,Documents/Other,disaggregate,ai
+.*,application/(pdf|msword|rtf|vnd\.openxmlformats-officedocument\.(wordprocessingml\.document|spreadsheetml\.sheet|presentationml\.presentation)|vnd\.ms-excel),Documents/Other,disaggregate,ai
+
+# Installers and executables - AI decides folder structure
+^.*\.(iso|img)$,*,Software/Installers,disaggregate,ai
+^.*\.(msi|pkg)$,*,Software/Installers,disaggregate,ai
+# TODO: this will break portable apps app_portable/{foo.exe , foo.dll ...}
+^.*\.(exe)$,*,Software/Installers,disaggregate,ai
+^.*\.dmg$,*,Software/Installers,keep,final
+
+
+# Fallback - Consult AI for unknown files (folders keep default KEEP behavior)
+^.*$,.*,Unknown,,ai

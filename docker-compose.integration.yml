@@ -1,0 +1,20 @@
+services:
+  itest:
+    build: .
+    container_name: data-cleaner-it
+    user: "${CONTAINER_UID:-1000}:${CONTAINER_GID:-1000}"
+    environment:
+      - OLLAMA_URL=${OLLAMA_URL:?Set OLLAMA_URL to a reachable Ollama instance}
+
+      - SOURCES=/sources/src1,/sources/src2
+      - MAIN_TARGET=/target
+      - REPORT_DIR=/target/_reports
+      - DB_PATH=/work/integration.sqlite
+      - OLLAMA_TIMEOUT=${OLLAMA_TIMEOUT:-120}
+      - VLOG=1
+    volumes:
+      - ./:/app:ro
+      - ./tests/data:/sources:ro
+      - ${IT_WORK_DIR:?Set IT_WORK_DIR to a writable host path}:/work
+      - ${IT_TARGET_DIR:?Set IT_TARGET_DIR to a writable host path}:/target
+    command: ["pytest","-s","-q","tests/integration"]

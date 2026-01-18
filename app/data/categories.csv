@@ -1,0 +1,64 @@
+# File Sorter Categories Configuration
+# Format: Category/Subcategory,template
+#
+# PATH ASSEMBLY: Category/Template/KeptPath/Filename
+#   - Category: Always prepended (e.g., "Media/Music")
+#   - Template: Your organization logic using metadata (middle part)
+#   - KeptPath: Preserved folders from source (suffix - auto-added)
+#   - Filename: Original filename (auto-added at end)
+#
+# IMPORTANT: Templates should NEVER include {filename} or {suffix}!
+#            These are ALWAYS automatically appended.
+#
+# Template Placeholders (for metadata organization only):
+#   {ai_category} - AI-suggested subcategory path
+#   {rule_category} - Rule-matched category
+#   {artist}, {album}, {title} - Music metadata
+#   {author} - Book metadata
+#   {year}, {month} - Date metadata
+#
+# Special: {title} in last template segment replaces filename (extension preserved)
+#          Example: {artist}/{album}/{title} with title="Song Name"
+#          Result: Media/Music/Artist/Album/Song Name.mp3
+#
+# Fallback syntax: {field1|field2|literal}
+#   Tries field1, then field2, then uses "literal" as default
+#
+# Example: Source file /library/Music/Rock/Queen/1975/song.mp3 (Music disaggregated)
+#   Template: {artist}/{album}
+#   Result: Media/Music/Queen/A Night at the Opera/Rock/Queen/1975/song.mp3
+#           └─Category─┘└─Template─────────────────┘└─KeptPath──────┘└─Filename─┘
+# if tag is missing, the folder just gets omitted
+# Foo/Bar,{tag} => Foo/Bar/d1/f2/filename
+# Unless there is a Fallback specified, then No Tag will be used if tag is empty
+# Foo/Bar,{tag|No Tag} => Foo/Bar/No Tag/d1/f2/filename
+
+# Default template for categories without specific templates
+__default__,{ai_category}
+
+# Media Categories
+Media/Photos,{year}/{ai_category}
+Media/Books/Digital,{author}/{title}
+Media/Books/Research,{Collection}/{ai_category}
+Media/Videos/Movies,{collection}/{title}
+Media/Videos/Shows,{collection}/{title}
+Media/Clips,{year|}/{collection}/{title}
+Media/Music,{artist}/{album}/{title}
+
+# Document Categories
+Documents/Finance,{year|}
+Documents/Receipts,{year|}
+Documents/Health,{year|}
+Documents/Legal,{year|}
+Documents/Taxes,{tax_year|year|UnknownYear}/{ai_category}
+Documents/Other,{year|}/{ai_category}
+
+# Software Categories
+Software/Dependencies,
+Software/Installers,
+Software/Source_Code,
+
+# System and Backup Categories
+System,
+Backups,{backup_year|year|UnknownYear}/{backup_month|month|UnknownMonth}/{backup_job|UnknownJob}
+Unknown,

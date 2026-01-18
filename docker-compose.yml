@@ -1,0 +1,40 @@
+services:
+  cleaner:
+    build: .
+    container_name: data-cleaner
+    user: "${CONTAINER_UID:-1000}:${CONTAINER_GID:-1000}"
+    environment:
+      - MODE=${MODE:-all}
+      - OLLAMA_URL=${OLLAMA_URL:?Set OLLAMA_URL to a reachable Ollama instance}
+
+      - SOURCES=/sources
+      - MAIN_TARGET=/target
+      - REPORT_DIR=${REPORT_DIR:-/target/_reports}
+      - DB_PATH=${DB_PATH:-/target/catalog.sqlite}
+      - RELINK_WITH_REFLINK=${RELINK_WITH_REFLINK:-true}
+      - MAX_CONTENT_PEEK=${MAX_CONTENT_PEEK:-1024}
+      - STRIP_DIRS=${STRIP_DIRS:-}
+      # new concurrency knobs
+      - SCAN_WORKERS=${SCAN_WORKERS:-4}
+      - HASH_WORKERS=${HASH_WORKERS:-4}
+      - OLLAMA_WORKERS=${OLLAMA_WORKERS:-4}
+      - DB_BATCH_SIZE=${DB_BATCH_SIZE:-500}
+      - OLLAMA_TIMEOUT=${OLLAMA_TIMEOUT:-120}
+      - VLOG=${VLOG:-1}
+    volumes:
+      - ${SRC1:?Set SRC1 in .env}:/sources/src1:ro
+      - ${TARGET:?Set TARGET in .env}:/target:rw
+      - cleaner_work:/work
+    restart: unless-stopped
+    # Use DNS_SERVER from .env when needed for local resolution
+    dns:
+      - ${DNS_SERVER:?Set DNS_SERVER in .env}
+    deploy:
+      resources:
+        limits:
+          memory: 8G
+        reservations:
+          memory: 2G
+
+volumes:
+  cleaner_work:
